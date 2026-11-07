@@ -8,7 +8,7 @@
 //
 // Layout is PC-style: number row with shifted glyphs, sticky modifiers (a touch
 // screen cannot hold a key down), arrows, Esc/Tab/Del/Enter.  Sized large for
-// elderly users: 24px glyphs, 64px letter keys.
+// elderly users: 24px glyphs and full-width letter keys.
 //
 // API lessons baked in (GNOME 50.1 -- all learned the hard way):
 //   * Main.layoutManager.addTopChrome() rejects 'affectsInputRegion'.
@@ -249,10 +249,7 @@ let BACKGROUND_URI = null;
 //     scale 0.85 -> 1120x421 (66%)
 //     scale 0.99 -> 1295x491 (76%)
 //
-// The panel grows roughly linearly with the factor, but not exactly: at some
-// sizes a text label ('Shift', 'Ctrl') is wider than the key's min-width and
-// pushes the row out, so the proportions drift by a couple of percent.  Tune
-// against the logged numbers, not against a formula.
+// The panel scales with the key pitch, rounded to whole pixels.
 //
 // The 1.00 design baseline stays in the px values; the steps just sit around
 // it.  Earlier attempts used 1310px from the design notes as the panel width at
@@ -305,14 +302,19 @@ const pxSoft = (value, scale) => value <= 0
 
 // A key kind that the current theme does not name falls back to a plain key,
 // so a typo in LAYOUT can never render an invisible button.
-function keyStyle(kind, minWidth, scale = 1) {
+function keyStyle(kind, units, scale) {
     const [bg, fg] = THEME[kind] ?? THEME.key;
+    const pitch = Math.round(80 * scale);
+    const gap = Math.max(1, Math.round(3 * scale));
+    const padding = Math.max(1, Math.round(6 * scale));
+    // St adds padding and margins to the CSS content width.
+    const width = Math.round(pitch * units) - 2 * (gap + padding);
     return `background-color: ${bg}; color: ${fg};`
         + ` border-radius: ${pxSoft(radiusKey(), scale)};`
-        + ` padding: ${px(14, scale)} ${px(6, scale)};`
-        + ` margin: ${px(3, scale)};`
+        + ` padding: ${px(14, scale)} ${padding}px;`
+        + ` margin: ${gap}px;`
         + ` font-size: ${px(24, scale)};`
-        + ` min-width: ${px(minWidth, scale)};`;
+        + ` width: ${width}px;`;
 }
 
 const boxStyle = scale => {
@@ -382,46 +384,44 @@ const shiftGlyphStyle = (on, scale) =>
     + ` font-size: ${px(15, scale)};`;
 
 // ---- key descriptors -------------------------------------------------
-const ch = (base, shifted, minW = 64) => ({base, shifted, minW, kind: 'key'});
-const act = (label, keysym, minW = 82) => ({label, keysym, minW, kind: 'act'});
-const md = (label, name, minW = 82) => ({label, mod: name, minW, kind: 'mod'});
+const ch = (base, shifted, units = 1) => ({base, shifted, units, kind: 'key'});
+const act = (label, keysym, units = 1) => ({label, keysym, units, kind: 'act'});
+const md = (label, name, units) => ({label, mod: name, units, kind: 'mod'});
 // Input-method switch: emits Super+Space, which GNOME maps to "switch input
 // source" (xkb:us <-> ibus:libpinyin).  Saved from accidental Super+Space.
-const ime = (minW = 96) => ({label: '中/英', ime: true, minW, kind: 'mod'});
+const ime = units => ({label: '中/英', ime: true, units, kind: 'mod'});
 
+// ANSI QWERTY stagger: Q starts at 1.5u, A at 1.75u and Z at 2.25u.
 const LAYOUT = [
     [
-        act('Esc', XK.Escape, 88),
         ch('`', '~'), ch('1', '!'), ch('2', '@'), ch('3', '#'), ch('4', '$'),
         ch('5', '%'), ch('6', '^'), ch('7', '&'), ch('8', '*'), ch('9', '('),
         ch('0', ')'), ch('-', '_'), ch('=', '+'),
-        act('⌫', XK.BackSpace, 100),
+        act('⌫', XK.BackSpace, 2), act('Esc', XK.Escape),
     ],
     [
-        act('Tab', XK.Tab, 96),
+        act('Tab', XK.Tab, 1.5),
         ch('q'), ch('w'), ch('e'), ch('r'), ch('t'), ch('y'), ch('u'), ch('i'),
-        ch('o'), ch('p'), ch('[', '{'), ch(']', '}'), ch('\\', '|'),
-        act('Del', XK.Delete, 88),
+        ch('o'), ch('p'), ch('[', '{'), ch(']', '}'), ch('\\', '|', 1.5),
+        act('Del', XK.Delete),
     ],
     [
-        md('Caps', 'caps', 108),
+        md('Caps', 'caps', 1.75),
         ch('a'), ch('s'), ch('d'), ch('f'), ch('g'), ch('h'), ch('j'), ch('k'),
         ch('l'), ch(';', ':'), ch("'", '"'),
-        act('⏎', XK.Return, 136),
+        act('⏎', XK.Return, 2.25),
     ],
     [
-        md('Shift', 'shift', 120),
+        md('Shift', 'shift', 2.25),
         ch('z'), ch('x'), ch('c'), ch('v'), ch('b'), ch('n'), ch('m'),
         ch(',', '<'), ch('.', '>'), ch('/', '?'),
-        act('↑', XK.Up, 86),
-        md('Shift', 'shift', 120),
+        md('Shift', 'shift', 1.75), act('↑', XK.Up),
     ],
     [
-        md('Ctrl', 'ctrl'), md('Alt', 'alt'), md('⊞', 'super'),
-        act('␣', XK.space, 340),
-        ime(),
-        md('Ctrl', 'ctrl'),
-        act('←', XK.Left, 82), act('↓', XK.Down, 82), act('→', XK.Right, 82),
+        md('Ctrl', 'ctrl', 1.25), md('Alt', 'alt', 1.25), md('⊞', 'super', 1.25),
+        act('␣', XK.space, 6.25),
+        ime(1.5), md('Ctrl', 'ctrl', 1.5),
+        act('←', XK.Left), act('↓', XK.Down), act('→', XK.Right),
     ],
 ];
 
@@ -1622,9 +1622,9 @@ export default class ErhaiOSK extends Extension {
             this._settings.style = settingsPanelStyle(s);
         for (const label of this._sectionLabels ?? [])
             label.style = sectionLabelStyle(s);
-        for (const {btn, kind, minW, mod} of this._styledKeys) {
+        for (const {btn, kind, units, mod} of this._styledKeys) {
             const active = mod ? this._modActive(mod) : false;
-            btn.style = keyStyle(active ? 'on' : kind, minW, s);
+            btn.style = keyStyle(active ? 'on' : kind, units, s);
         }
         for (const glyph of this._shiftGlyphs)
             glyph.style = shiftGlyphStyle(this._shift, s);
@@ -1709,7 +1709,7 @@ export default class ErhaiOSK extends Extension {
         for (const row of LAYOUT) {
             const r = new St.BoxLayout({
                 reactive: false,
-                x_align: Clutter.ActorAlign.CENTER,
+                x_align: Clutter.ActorAlign.START,
             });
             for (const def of row)
                 r.add_child(this._key(def));
@@ -1755,7 +1755,7 @@ export default class ErhaiOSK extends Extension {
 
         const btn = new St.Button({
             child: content,
-            style: keyStyle('key', def.minW, this._scale),
+            style: keyStyle('key', def.units, this._scale),
             reactive: true,
             can_focus: false,
             track_hover: true,
@@ -1763,13 +1763,13 @@ export default class ErhaiOSK extends Extension {
         // Letters, digits and symbols all repeat while held.  A closure per key
         // so the repeat honours caps/shift exactly like a single tap does.
         this._attachRepeat(btn, () => this._emitChar(def));
-        this._styledKeys.push({btn, kind: 'key', minW: def.minW, mod: null});
+        this._styledKeys.push({btn, kind: 'key', units: def.units, mod: null});
         return btn;
     }
 
     _plainKey(def) {
         const active = def.mod && this._modActive(def.mod);
-        const style = keyStyle(active ? 'on' : def.kind, def.minW, this._scale);
+        const style = keyStyle(active ? 'on' : def.kind, def.units, this._scale);
 
         const btn = new St.Button({
             child: new St.Label({
@@ -1783,13 +1783,13 @@ export default class ErhaiOSK extends Extension {
             track_hover: true,
         });
         this._styledKeys.push({
-            btn, kind: def.kind, minW: def.minW, mod: def.mod ?? null,
+            btn, kind: def.kind, units: def.units, mod: def.mod ?? null,
         });
 
         if (def.ime) {
             btn.connect('clicked', () => this._toggleIme());
         } else if (def.mod) {
-            this._modButtons.push({name: def.mod, btn, minW: def.minW});
+            this._modButtons.push({name: def.mod, btn, units: def.units});
             btn.connect('clicked', () => this._toggleMod(def.mod));
         } else if (def.keysym !== undefined) {
             if (REPEATABLE.has(def.keysym)) {
@@ -1952,9 +1952,9 @@ export default class ErhaiOSK extends Extension {
         }
         for (const glyph of this._shiftGlyphs)
             glyph.style = shiftGlyphStyle(this._shift, this._scale);
-        for (const {name, btn, minW} of this._modButtons)
+        for (const {name, btn, units} of this._modButtons)
             btn.style = keyStyle(
-                this._modActive(name) ? 'on' : 'mod', minW, this._scale);
+                this._modActive(name) ? 'on' : 'mod', units, this._scale);
     }
 
     // ---- visibility ---------------------------------------------------

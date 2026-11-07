@@ -1,16 +1,22 @@
 # PAD-OSK
 
+**QWERTY 布局改版**，基于 [HOSHINO61/ubuntu-pad-keyboard](https://github.com/HOSHINO61/ubuntu-pad-keyboard)（上游 PAD-OSK）。感谢上游作者及贡献者。本分支保留原项目的 [MIT 许可证](LICENSE)。
+
+## 本分支的改动
+
+- 按照美式 ANSI QWERTY 实体键盘对齐字母和数字排。以单个字母键的间距为单位，`A` 比 `Q` 右移四分之一键，`Z` 再比 `A` 右移半键。
+- 大、中、小三档使用相同的键位比例。`Esc` 位于退格键右侧，`↑` 对齐在 `↓` 上方。
+- 在独立的 GNOME Shell 50.1 Wayland 会话中核对了三档的键位。触屏手感因设备而异。
+
+## 上游项目
+
 一加 Pad 2 Pro（OPD2413 / `erhai`）在 **GNOME 50 Wayland** 下可用的屏幕键盘，其它平板请自测。
 PC 风格布局、大按键、**支持中文输入**、可在系统菜单/应用抽屉里按需开关。
 
-- 实测环境：一加 Pad 2 Pro，Ubuntu 26.04.1 LTS，GNOME Shell 50.1，arm64
-- 实测应用：QQ（Electron）、Chrome、Firefox、终端 —— **均可正常输入，含中文**
+- 上游实测环境为一加 Pad 2 Pro、Ubuntu 26.04.1 LTS、GNOME Shell 50.1、arm64。
+- 上游在 QQ（Electron）、Chrome、Firefox 和终端中验证了中文输入。
 
-> **项目主页：[mybailu.cn/osk](https://mybailu.cn/osk)** —— 功能介绍、截图、安装指引都在这里。
->
-> 源码：**中国大陆用户建议访问 [Gitee 镜像](https://gitee.com/HOSHINO6/ubuntu-pad-keyboard)**，
-> 下载更快、连接更稳定；**海外用户建议使用 [GitHub](https://github.com/HOSHINO61/ubuntu-pad-keyboard)**。
-> 两个仓库内容对等，均可使用。
+上游资料可在 [PAD-OSK 项目主页](https://mybailu.cn/osk)和 [Gitee 镜像](https://gitee.com/HOSHINO6/ubuntu-pad-keyboard)查看。
 
 ---
 
@@ -106,33 +112,28 @@ GNOME Shell 进程
 | 上档符号 | `Shift` + 数字/符号键 |
 | 模态对话框自动让开 | 关机/重启/注销对话框出现时键盘自动隐藏，关闭后恢复 |
 
-布局：
+本分支键位示意
 
 ```
-Esc  `~  1!  2@  3#  4$  5%  6^  7&  8*  9(  0)  -_  =+   ⌫
-Tab   q w e r t y u i o p  [{  ]}  \|                  Del
-Caps   a s d f g h j k l  ;:  '"                      ⏎
-Shift   z x c v b n m  ,<  .>  /?                    ↑  Shift
-Ctrl  Alt  ⊞        [     空格     ]   中/英  Ctrl  ← ↓ →
+`~  1!  2@  3#  4$  5%  6^  7&  8*  9(  0)  -_  =+    ⌫    Esc
+Tab   q   w   e   r   t   y   u   i   o   p   [{  ]}   \|    Del
+Caps   a   s   d   f   g   h   j   k   l   ;:  '"      Enter
+Shift    z   x   c   v   b   n   m   ,<  .>  /?  Shift   ↑
+Ctrl Alt  ⊞       [     空格     ]       中/英 Ctrl   ←  ↓  →
 ```
 
 尺寸可三档切换（拖动条 `⚙` → 设置面板 → `小` `中` `大`）：
 
-| 档位 | 缩放 | 字号 | 字母键宽 | 面板（实测） | 占屏宽 |
-|---|---|---|---|---|---|
-| 小 | 0.72 | 17px | 46px | 927×349 | **55%** |
-| 中（默认） | 0.85 | 20px | 54px | 1120×421 | **66%** |
-| 大 | 0.99 | 24px | 63px | 1295×491 | **76%** |
-
-基准（缩放 1.00）是标准的 24px 字号、64px 字母键，面板约 1310px 宽；
-三档围绕它缩放。面板宽度随缩放近似线性增长，但**不是严格线性**——某些字号下
-`Shift`/`Ctrl` 这类文字标签会撑破键位的 `min-width`，让整行变宽，比例会漂 1–2 %。
-上表是这台平板上实测的（逻辑屏宽 1696 px），调参请对着实测数字而不是公式。
+| 档位 | 缩放 | 字号 | 相邻字母键的中心间距 |
+|---|---|---|---|
+| 小 | 0.72 | 17px | 约 58px |
+| 中（默认） | 0.85 | 20px | 约 68px |
+| 大 | 0.99 | 24px | 约 79px |
 
 每次切换尺寸，扩展会往 journal 里记一行，方便核对：
 
 ```
-erhai-osk: panel 1120x421 (66% of 1696px, step medium scale 0.85)
+erhai-osk: panel 944x348 (56% of 1696px, step small scale 0.72)
 ```
 切换时**就地重排、不重建按键**（重建会让正在按下的触摸落到别的键上，产生杂字符），
 底边保持不动，所以键盘向上生长、不会跑出屏幕。尺寸与位置一起存在
@@ -272,6 +273,8 @@ background=/home/user/图片/星空.webp
 
 ## 截图
 
+以下是上游 1.0 的截图，用于参考设置入口和配色。改版后的按键位置见上方的键位示意。
+
 1.0 的设置面板——浅色配色、60% 透明、大圆角，五行设置全在里面：
 
 ![PAD-OSK 1.0 设置面板](docs/images/keyboard-v1.0-settings.png)
@@ -290,7 +293,13 @@ background=/home/user/图片/星空.webp
 
 ## 安装
 
+在 Ubuntu ARM64 的 GNOME 50 Wayland 会话下，从本分支源码构建并安装。
+构建需要 Git 和 `dpkg-deb`。
+
 ```bash
+git clone https://github.com/linux0922/ubuntu-pad-keyboard.git
+cd ubuntu-pad-keyboard
+sh packaging/build-deb.sh
 sudo apt install ./dist/pad-osk_1.0_arm64.deb
 ```
 
@@ -302,6 +311,8 @@ GNOME 只在 shell 启动时扫描扩展目录，所以必须重启一次会话�
 - 右上角系统菜单 → **屏幕键盘** 开关
 - 应用抽屉 → **PAD-OSK** 图标
 
+可以运行 `gnome-extensions info erhai-osk@local` 检查扩展状态。如果扩展已加载但未启用，可运行 `gnome-extensions enable erhai-osk@local`。
+
 卸载：
 
 ```bash
@@ -310,18 +321,6 @@ sudo apt remove pad-osk
 
 用户配置 `~/.config/pad-osk/`（位置、开关状态、尺寸、配色）会保留。
 
-
-### 从源码构建
-
-需要 `dpkg-deb`（无需 debhelper）：
-
-```bash
-sh packaging/build-deb.sh
-# → dist/pad-osk_1.0_arm64.deb
-```
-
-版本号与架构都取自 `packaging/pad-osk/DEBIAN/control`，
-产物文件名自动跟随。
 
 ### 换行符（重要）
 
